@@ -1,51 +1,103 @@
 import { StatusBar } from "expo-status-bar";
-import { StyleSheet, Text, View } from "react-native";
-import { NavigationContainer } from "@react-navigation/native";
-import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
-import { Colors } from "./utils/styles";
+import {
+  NavigationContainer,
+} from "@react-navigation/native";
+
+import {
+  createNativeStackNavigator,
+} from "@react-navigation/native-stack";
+
+import { useDispatch, useSelector } from "react-redux";
+
 import LoginScreen from "./screens/LoginScreen";
 import SignupScreen from "./screens/SignupScreen";
 import WelcomeScreen from "./screens/WelcomeScreen";
+
 import IconButton from "./components/ui/IconButton";
+
 import { authActions } from "./store/authSlice";
 
+import { logout } from "./utils/authDataService";
+
 const Stack = createNativeStackNavigator();
+
+const COLORS = {
+  primary500: "#72063c",
+  primary100: "#f3dae5",
+};
 
 function AuthStack() {
   return (
     <Stack.Navigator
       screenOptions={{
-        headerStyle: { backgroundColor: Colors.primary500 },
+        headerStyle: {
+          backgroundColor: COLORS.primary500,
+        },
         headerTintColor: "white",
-        contentStyle: { backgroundColor: Colors.primary100 },
+        contentStyle: {
+          backgroundColor: COLORS.primary100,
+        },
       }}
     >
-      <Stack.Screen name="Login" component={LoginScreen} />
-      <Stack.Screen name="Signup" component={SignupScreen} />
+      <Stack.Screen
+        name="Login"
+        component={LoginScreen}
+      />
+
+      <Stack.Screen
+        name="Signup"
+        component={SignupScreen}
+      />
     </Stack.Navigator>
   );
 }
 
 function EnteredStack() {
+  const dispatch = useDispatch();
+
+  const username = useSelector(
+    (state) => state.auth.login
+  );
+
+  const refreshToken = useSelector(
+    (state) => state.auth.refreshToken
+  );
+
+  async function logoutHandler() {
+    try {
+      await logout(refreshToken);
+    } catch (error) {
+      console.log("Logout failed:", error.message);
+    } finally {
+      dispatch(authActions.logout());
+    }
+  }
+
   return (
     <Stack.Navigator
       screenOptions={{
-        headerStyle: { backgroundColor: Colors.primary500 },
+        headerStyle: {
+          backgroundColor: COLORS.primary500,
+        },
         headerTintColor: "white",
-        contentStyle: { backgroundColor: Colors.primary100 },
+        contentStyle: {
+          backgroundColor: COLORS.primary100,
+        },
       }}
     >
       <Stack.Screen
-        name={`Welcome to posts, ${username}!`}
+        name="Welcome"
         component={WelcomeScreen}
         options={{
+          title: `Welcome to posts, ${username}!`,
+
           headerRight: ({ tintColor }) => (
             <IconButton
               icon="exit"
               color={tintColor}
               size={24}
-              onPress={() => dispatch(authActions.logout(refreshToken))}
+              onPress={logoutHandler}
             />
           ),
         }}
@@ -55,26 +107,22 @@ function EnteredStack() {
 }
 
 function InnerNavigation() {
-  const isAuthenticated = false;
-  return isAuthenticated ? <EnteredStack /> : <AuthStack />;
+  const token = useSelector(
+    (state) => state.auth.token
+  );
+
+  return (
+    <NavigationContainer>
+      {token ? <EnteredStack /> : <AuthStack />}
+    </NavigationContainer>
+  );
 }
 
 export default function App() {
   return (
     <>
       <StatusBar style="light" />
-      <NavigationContainer>
-        <InnerNavigation />
-      </NavigationContainer>
+      <InnerNavigation />
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-});
